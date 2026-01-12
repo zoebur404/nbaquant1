@@ -2,8 +2,8 @@ name: NBA Quant Data Pipeline
 
 on:
   schedule:
-    - cron: "0 */3 * * *"   # every 3 hours
-  workflow_dispatch:
+    - cron: "0 */3 * * *"   # Every 3 hours
+  workflow_dispatch:        # Manual trigger
 
 jobs:
   run-pipeline:
@@ -18,10 +18,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install nba_quant package
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install .
 
       - name: Run Phase 1 ingestion
         run: |
@@ -35,10 +35,14 @@ jobs:
         run: |
           python -m nba_quant.cli.fetch_injuries > injuries_full.txt
 
+      - name: Generate tonight's board
+        run: |
+          python -m nba_quant.cli.run_board > board_output.txt
+
       - name: Commit updated data
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
-          git add storage/*.parquet top_players.txt injuries_full.txt || true
-          git commit -m "Automated data update" || true
+          git add storage/*.parquet top_players.txt injuries_full.txt board_output.txt || true
+          git commit -m "Automated Phase 1 ingestion update" || true
           git push
